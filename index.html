@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevStudio — Mobile Code Editor</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/codemirror.min.css">
+  <link rel="stylesheet" href="css/theme-monokai.css">
+  <script src="js/codemirror.min.js"></script>
+  <script src="js/mode-xml.js"></script>
+  <script src="js/mode-css.js"></script>
+  <script src="js/mode-javascript.js"></script>
+  <script src="js/mode-htmlmixed.js"></script>
+  <script src="js/addon-closebrackets.js"></script>
+  <script src="js/addon-closetag.js"></script>
+  <script src="js/addon-matchbrackets.js"></script>
+  <script src="js/addon-matchtags.js"></script>
+  <script src="js/addon-foldcode.js"></script>
+  <script src="js/addon-comment.js"></script>
+  <script src="js/addon-search.js"></script>
+  <script src="js/addon-hint-show.js"></script>
+  <script src="js/addon-hint-html.js"></script>
+  <script src="js/addon-hint-css.js"></script>
+</head>
+<body>
+  <!-- TOP MENU BAR -->
+  <div id="menubar">
+    <div class="menu-left">
+      <span class="logo">⚡ DevStudio</span>
+      <div class="menu-group">
+        <button class="menu-btn" onclick="newFile()">＋ New</button>
+        <button class="menu-btn" onclick="openFile()">📂 Open</button>
+        <button class="menu-btn" onclick="saveFile()">💾 Save</button>
+        <button class="menu-btn" onclick="downloadFile()">⬇ Download</button>
+        <button class="menu-btn" onclick="uploadFile()">⬆ Upload</button>
+        <button class="menu-btn" onclick="downloadZip()">📦 ZIP</button>
+      </div>
+    </div>
+    <div class="menu-center">
+      <button class="menu-btn active-tab" id="tab-html" onclick="switchTab('html')">HTML</button>
+      <button class="menu-btn" id="tab-css" onclick="switchTab('css')">CSS</button>
+      <button class="menu-btn" id="tab-js" onclick="switchTab('js')">JS</button>
+    </div>
+    <div class="menu-right">
+      <button class="menu-btn" onclick="toggleWrap()" title="Word Wrap (Alt+Z)">⏎ Wrap</button>
+      <button class="menu-btn" onclick="formatCode()" title="Format Code (Shift+Alt+F)">⚙ Format</button>
+      <button class="menu-btn" onclick="toggleComment()" title="Comment (Ctrl+/)">// Comment</button>
+      <button class="menu-btn" onclick="openSearch()" title="Find (Ctrl+F)">🔍</button>
+      <button class="menu-btn" onclick="togglePreviewDevice()" id="device-btn" title="Toggle Device">📱</button>
+      <div class="zoom-control">
+        <span>Zoom:</span>
+        <input type="range" id="fontZoom" min="10" max="22" value="14" oninput="changeFontSize(this.value)">
+        <span id="zoomVal">14px</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN AREA -->
+  <div id="main">
+    <!-- FILE TREE -->
+    <div id="sidebar">
+      <div class="sidebar-header">
+        <span>📁 EXPLORER</span>
+        <div>
+          <button class="icon-btn" onclick="addFile()" title="New File">+</button>
+          <button class="icon-btn" onclick="addFolder()" title="New Folder">📁</button>
+        </div>
+      </div>
+      <div id="file-tree"></div>
+    </div>
+
+    <!-- SIDEBAR RESIZE HANDLE -->
+    <div id="sidebar-resizer"></div>
+
+    <!-- EDITOR AREA -->
+    <div id="editor-area">
+      <!-- BREADCRUMB -->
+      <div id="breadcrumb">
+        <span id="current-file-path">index.html</span>
+        <span id="cursor-pos">Ln 1, Col 1</span>
+        <span id="lang-label">HTML</span>
+      </div>
+
+      <!-- CODEMIRROR EDITOR -->
+      <div id="editor-wrapper">
+        <textarea id="editor"></textarea>
+      </div>
+
+      <!-- STATUS BAR -->
+      <div id="statusbar">
+        <span id="status-left">✓ Ready</span>
+        <div class="status-shortcuts">
+          <span>Ctrl+S Save</span>
+          <span>Ctrl+Z Undo</span>
+          <span>Ctrl+/ Comment</span>
+          <span>Ctrl+D Duplicate</span>
+          <span>Ctrl+F Find</span>
+          <span>Alt+↑↓ Move Line</span>
+        </div>
+        <span id="status-right">UTF-8</span>
+      </div>
+    </div>
+
+    <!-- PREVIEW RESIZER -->
+    <div id="preview-resizer">
+      <div id="resizer-handle">
+        <span>⋮⋮</span>
+      </div>
+    </div>
+
+    <!-- PREVIEW PANEL -->
+    <div id="preview-panel">
+      <div id="preview-toolbar">
+        <span>Preview</span>
+        <div class="preview-controls">
+          <button class="icon-btn" onclick="refreshPreview()" title="Refresh">↺</button>
+          <button class="icon-btn" onclick="togglePreviewDevice()" title="Toggle Device">📱</button>
+          <span id="preview-size-label">375×667</span>
+        </div>
+      </div>
+      <div id="preview-container">
+        <div id="phone-frame">
+          <div class="phone-notch"></div>
+          <iframe id="preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTEXT MENU (Right click on preview) -->
+  <div id="context-menu">
+    <div class="ctx-header">🎨 CSS Xüsusiyyətləri</div>
+    <div class="ctx-section">
+      <label>Display</label>
+      <select id="ctx-display" onchange="applyCSS('display', this.value)">
+        <option>block</option><option>flex</option><option>grid</option>
+        <option>inline</option><option>inline-block</option><option>none</option>
+      </select>
+    </div>
+    <div class="ctx-section">
+      <label>Width</label>
+      <div class="ctx-row">
+        <input type="text" id="ctx-width" placeholder="e.g. 100px" oninput="applyCSS('width', this.value)">
+      </div>
+    </div>
+    <div class="ctx-section">
+      <label>Height</label>
+      <input type="text" id="ctx-height" placeholder="e.g. 50px" oninput="applyCSS('height', this.value)">
+    </div>
+    <div class="ctx-section">
+      <label>Background Color</label>
+      <div class="ctx-row">
+        <input type="color" id="ctx-bgcolor" oninput="applyCSS('backgroundColor', this.value)">
+        <input type="text" id="ctx-bgcolor-text" placeholder="#ffffff" oninput="syncColor('bgcolor', this.value)">
+      </div>
+    </div>
+    <div class="ctx-section">
+      <label>Text Color</label>
+      <div class="ctx-row">
+        <input type="color" id="ctx-color" oninput="applyCSS('color', this.value)">
+        <input type="text" id="ctx-color-text" placeholder="#000000" oninput="syncColor('color', this.value)">
+      </div>
+    </div>
+    <div class="ctx-section">
+      <label>Font Size</label>
+      <div class="ctx-row">
+        <input type="range" id="ctx-fontsize" min="8" max="72" value="16" oninput="applyCSS('fontSize', this.value+'px'); document.getElementById('ctx-fontsize-val').textContent=this.value+'px'">
+        <span id="ctx-fontsize-val">16px</span>
+      </div>
+    </div>
+    <div class="ctx-section">
+      <label>Font Weight</label>
+      <select id="ctx-fontweight" onchange="applyCSS('fontWeight', this.value)">
+        <option value="300">Light 300</option>
+        <option value="400" selected>Normal 400</option>
+        <option value="600">Semi-Bold 600</option>
+        <option value="700">Bold 700</option>
+        <option value="900">Black 900</option>
+      </select>
+    </div>
+    <div class="ctx-section">
+      <label>Padding</label>
+      <input type="text" id="ctx-padding" placeholder="e.g. 10px 20px" oninput="applyCSS('padding', this.value)">
+    </div>
+    <div class="ctx-section">
+      <label>Margin</label>
+      <input type="text" id="ctx-margin" placeholder="e.g. 0 auto" oninput="applyCSS('margin', this.value)">
+    </div>
+    <div class="ctx-section">
+      <label>Border Radius</label>
+      <div class="ctx-row">
+        <input type="range" id="ctx-radius" min="0" max="50" value="0" oninput="applyCSS('borderRadius', this.value+'px'); document.getElementById('ctx-radius-val').textContent=this.value+'px'">
+        <span id="ctx-radius-val">0px</span>
+      </div>
+    </div>
+    <div class="ctx-section">
+      <label>Border</label>
+      <input type="text" id="ctx-border" placeholder="e.g. 1px solid #ccc" oninput="applyCSS('border', this.value)">
+    </div>
+    <div class="ctx-section">
+      <label>Opacity</label>
+      <div class="ctx-row">
+        <input type="range" id="ctx-opacity" min="0" max="100" value="100" oninput="applyCSS('opacity', this.value/100); document.getElementById('ctx-opacity-val').textContent=this.value+'%'">
+        <span id="ctx-opacity-val">100%</span>
+      </div>
+    </div>
+    <div class="ctx-section">
+      <label>Box Shadow</label>
+      <input type="text" id="ctx-shadow" placeholder="e.g. 0 2px 10px rgba(0,0,0,.3)" oninput="applyCSS('boxShadow', this.value)">
+    </div>
+    <div class="ctx-section">
+      <label>Text Align</label>
+      <div class="ctx-row">
+        <button class="align-btn" onclick="applyCSS('textAlign','left')">⬅</button>
+        <button class="align-btn" onclick="applyCSS('textAlign','center')">⬛</button>
+        <button class="align-btn" onclick="applyCSS('textAlign','right')">➡</button>
+        <button class="align-btn" onclick="applyCSS('textAlign','justify')">☰</button>
+      </div>
+    </div>
+    <div class="ctx-actions">
+      <button onclick="applyCSSToCode()" class="ctx-apply-btn">✓ Koda Tətbiq Et</button>
+      <button onclick="closeContextMenu()" class="ctx-close-btn">✕ Bağla</button>
+    </div>
+  </div>
+
+  <!-- MODALS -->
+  <div id="modal-overlay" onclick="closeModal()"></div>
+  <div id="new-file-modal" class="modal">
+    <h3>Yeni Fayl</h3>
+    <input type="text" id="new-filename" placeholder="fayl adı (məs: about.html)" autofocus>
+    <div class="modal-actions">
+      <button onclick="createNewFile()">Yarat</button>
+      <button onclick="closeModal()">Ləğv et</button>
+    </div>
+  </div>
+
+  <!-- SEARCH BAR -->
+  <div id="search-bar">
+    <input type="text" id="search-input" placeholder="Axtar...">
+    <input type="text" id="replace-input" placeholder="Əvəzlə...">
+    <button onclick="doSearch()">↓ Tap</button>
+    <button onclick="doReplace()">Əvəzlə</button>
+    <button onclick="doReplaceAll()">Hamısını Əvəzlə</button>
+    <button onclick="closeSearch()">✕</button>
+  </div>
+
+  <!-- UPLOAD INPUT -->
+  <input type="file" id="upload-input" multiple accept=".html,.css,.js,.json,.txt,.svg" style="display:none" onchange="handleUpload(this)">
+
+  <script src="js/app.js"></script>
+</body>
+</html>
