@@ -285,12 +285,15 @@ function renderPreview() {
   saveCurrentFile();
 
   const html = state.files[Object.keys(state.files).find(f => f.endsWith('.html')) || 'index.html'] || '';
-  const css = state.files[Object.keys(state.files).find(f => f.endsWith('.css')) || 'style.css'] || '';
+  const css  = state.files[Object.keys(state.files).find(f => f.endsWith('.css')) || 'style.css'] || '';
   const js = state.files[Object.keys(state.files).find(f => f.endsWith('.js')) || 'app.js'] || '';
+
+  // Wrap user JS in DOMContentLoaded so DOM is ready
+  const safeJs = `document.addEventListener('DOMContentLoaded', function() {\ntry {\n${js}\n} catch(e) { console.error('Preview JS error:', e); }\n});`;
 
   const combined = html
     .replace(/<link[^>]+href=["'][^"']*\.css["'][^>]*>/gi, `<style>${css}</style>`)
-    .replace(/<script[^>]+src=["'][^"']*\.js["'][^>]*><\/script>/gi, `<script>${js}<\/script>`);
+    .replace(/<script[^>]+src=["'][^"']*\.js["'][^>]*><\/script>/gi, `<script>${safeJs}<\/script>`);
 
   const frame = document.getElementById('preview-frame');
   const doc = frame.contentDocument || frame.contentWindow.document;
@@ -590,6 +593,7 @@ function toggleWrap() {
 }
 
 function toggleComment() {
+  if (!editor) return;
   editor.execCommand('toggleComment');
 }
 
