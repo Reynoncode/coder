@@ -133,6 +133,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // ===== CODEMIRROR INIT =====
 function initEditor() {
   const textarea = document.getElementById('editor');
+  // matchTags requires addon-xml-fold.js (findMatchingTag). Only enable if available.
+  const hasMatchTags = typeof CodeMirror.findMatchingTag === 'function';
   editor = CodeMirror.fromTextArea(textarea, {
     mode: 'htmlmixed',
     theme: 'monokai',
@@ -140,7 +142,7 @@ function initEditor() {
     autoCloseBrackets: true,
     autoCloseTags: true,
     matchBrackets: true,
-    matchTags: { bothTags: true },
+    matchTags: hasMatchTags ? { bothTags: true } : false,
     foldGutter: true,
     gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
     indentUnit: 2,
@@ -249,6 +251,7 @@ function switchTab(tab, filename = null) {
 }
 
 function loadFileToEditor(filename) {
+  if (!editor) return;
   const content = state.files[filename] || '';
   editor.setValue(content);
 
